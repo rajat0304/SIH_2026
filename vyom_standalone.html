@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ DOCTYPE html>
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
@@ -1220,7 +1220,7 @@ ${Oe.translations[x]}
     </script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        const removedSections = ["INSIGHTS", "RISK MAP", "HISTORICAL DATA"];
+        const removedSections = ["RISK MAP", "HISTORICAL DATA"];
         const removeSectionLinks = () => {
           document.querySelectorAll("#root button, #root a").forEach((element) => {
             if (removedSections.includes(element.textContent.trim())) element.remove();
@@ -1306,8 +1306,335 @@ ${Oe.translations[x]}
         mountLiveMonitor();
       });
     </script>
+    <style>
+      .forecast-command-center {
+        --forecast-cyan: #68e8ff;
+        --forecast-blue: #75a9ff;
+        --forecast-amber: #ffb454;
+        --forecast-red: #ff6d65;
+        position: relative;
+        overflow: hidden;
+        padding: clamp(1.25rem, 3vw, 3rem);
+        border: 1px solid rgba(104, 232, 255, 0.25);
+        border-radius: 1.25rem;
+        background: linear-gradient(135deg, rgba(4, 17, 34, 0.96), rgba(5, 12, 27, 0.9));
+        box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      }
+
+      .forecast-command-center::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(115deg, transparent 15%, rgba(104, 232, 255, 0.07) 50%, transparent 82%), repeating-linear-gradient(0deg, transparent 0 31px, rgba(104, 232, 255, 0.035) 32px);
+      }
+
+      .forecast-command-center > * { position: relative; z-index: 1; }
+      .forecast-kicker { display: flex; align-items: center; gap: .55rem; color: var(--forecast-cyan); font: 700 .62rem "JetBrains Mono", monospace; letter-spacing: .16em; text-transform: uppercase; }
+      .forecast-kicker i { width: .45rem; height: .45rem; border-radius: 50%; background: var(--forecast-cyan); box-shadow: 0 0 14px var(--forecast-cyan); animation: forecast-pulse 1.8s ease-in-out infinite; }
+      .forecast-heading { max-width: 55rem; margin-top: .7rem; color: #f3fbff; font: 700 clamp(2.3rem, 5vw, 4.5rem)/.98 "Chakra Petch", sans-serif; letter-spacing: .035em; }
+      .forecast-heading span { display: block; margin-top: .8rem; color: var(--forecast-cyan); font: 500 clamp(.95rem, 1.6vw, 1.25rem)/1.3 "JetBrains Mono", monospace; letter-spacing: .03em; }
+      .forecast-intro { max-width: 44rem; margin-top: 1rem; color: #9ab0c6; font: .85rem/1.7 "Inter", sans-serif; }
+      .forecast-meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.2rem; color: #91aec0; font: .58rem "JetBrains Mono", monospace; letter-spacing: .08em; text-transform: uppercase; }
+      .forecast-meta b { padding: .45rem .6rem; border: 1px solid rgba(104, 232, 255, .2); border-radius: .35rem; color: var(--forecast-cyan); background: rgba(4, 28, 49, .72); }
+      .forecast-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: .85rem; margin-top: 2rem; }
+      .forecast-card { min-height: 9.7rem; padding: 1rem; border: 1px solid rgba(135, 169, 207, .18); border-radius: .75rem; background: rgba(9, 28, 50, .7); backdrop-filter: blur(14px); transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+      .forecast-card:hover { transform: translateY(-4px); border-color: rgba(104, 232, 255, .62); box-shadow: 0 15px 32px rgba(0, 0, 0, .25), 0 0 24px rgba(104, 232, 255, .09); }
+      .forecast-card.wide { grid-column: span 4; }
+      .forecast-card.standard { grid-column: span 2; }
+      .forecast-label { display: flex; align-items: center; gap: .45rem; color: #91aec0; font: 700 .58rem "JetBrains Mono", monospace; letter-spacing: .09em; text-transform: uppercase; }
+      .forecast-icon { color: var(--forecast-cyan); font-size: 1.2rem; animation: forecast-float 3.5s ease-in-out infinite; }
+      .forecast-value { margin-top: .7rem; color: #f3fbff; font: 700 2rem/1 "Chakra Petch", sans-serif; letter-spacing: .02em; }
+      .forecast-value small { color: #91aec0; font: .65rem "JetBrains Mono", monospace; }
+      .forecast-detail { margin-top: .45rem; color: #6e9bb4; font: .62rem/1.45 "JetBrains Mono", monospace; }
+      .forecast-bar { height: .25rem; margin-top: .8rem; overflow: hidden; border-radius: 99px; background: rgba(145, 174, 192, .14); }
+      .forecast-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--forecast-cyan), var(--forecast-blue)); }
+      .forecast-alert { border-color: rgba(255, 109, 101, .42); background: linear-gradient(145deg, rgba(78, 28, 35, .48), rgba(22, 25, 45, .72)); }
+      .forecast-alert .forecast-label, .forecast-alert .forecast-value { color: #ffaaa1; }
+      .forecast-alert .forecast-icon { color: var(--forecast-red); }
+      .forecast-section-title { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-top: 2.3rem; padding-bottom: .7rem; border-bottom: 1px solid rgba(135, 169, 207, .2); }
+      .forecast-section-title h2 { color: #f3fbff; font: 700 1.35rem "Chakra Petch", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+      .forecast-section-title p { color: #6e9bb4; font: .58rem "JetBrains Mono", monospace; letter-spacing: .08em; text-transform: uppercase; }
+      .forecast-timeline { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .55rem; margin-top: 1rem; }
+      .forecast-day { padding: .8rem .65rem; border-left: 2px solid rgba(104, 232, 255, .25); background: rgba(8, 25, 45, .55); }
+      .forecast-day:first-child { border-color: var(--forecast-cyan); background: rgba(104, 232, 255, .09); }
+      .forecast-day strong { display: block; color: #f3fbff; font: 700 .7rem "JetBrains Mono", monospace; }
+      .forecast-day span { display: block; margin-top: .55rem; color: var(--forecast-cyan); font: 700 1.35rem "Chakra Petch", sans-serif; }
+      .forecast-day small { color: #91aec0; font: .58rem "JetBrains Mono", monospace; }
+      .extreme-weather { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; margin-top: 1rem; }
+      .extreme-card { position: relative; display: flex; min-height: 14rem; flex-direction: column; justify-content: space-between; overflow: hidden; padding: 1.25rem; border: 1px solid rgba(255, 180, 84, .32); border-radius: .8rem; background: radial-gradient(circle at 100% 0, rgba(255, 180, 84, .18), transparent 42%), rgba(35, 25, 24, .68); transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+      .extreme-card.cold { border-color: rgba(117, 169, 255, .35); background: radial-gradient(circle at 100% 0, rgba(117, 169, 255, .18), transparent 42%), rgba(10, 28, 50, .72); }
+      .extreme-card:hover, .extreme-card:focus-within { transform: translateY(-5px); border-color: var(--forecast-amber); box-shadow: 0 18px 34px rgba(0, 0, 0, .3), 0 0 26px rgba(255, 180, 84, .12); }
+      .extreme-card.cold:hover, .extreme-card.cold:focus-within { border-color: var(--forecast-blue); box-shadow: 0 18px 34px rgba(0, 0, 0, .3), 0 0 26px rgba(117, 169, 255, .12); }
+      .extreme-icon { font-size: 2.3rem; filter: drop-shadow(0 0 14px rgba(255, 180, 84, .4)); }
+      .cold .extreme-icon { filter: drop-shadow(0 0 14px rgba(117, 169, 255, .45)); }
+      .extreme-card h3 { margin-top: .55rem; color: #fff7eb; font: 700 1.55rem "Chakra Petch", sans-serif; letter-spacing: .1em; }
+      .cold h3 { color: #e8f4ff; }
+      .extreme-card p { max-width: 22rem; margin-top: .35rem; color: #b0b8c2; font: .76rem/1.5 "Inter", sans-serif; }
+      .extreme-link { display: inline-flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.2rem; padding: .72rem .85rem; border: 1px solid rgba(255, 180, 84, .55); border-radius: .35rem; color: #24170a; background: var(--forecast-amber); font: 700 .62rem "JetBrains Mono", monospace; letter-spacing: .04em; text-decoration: none; }
+      .cold .extreme-link { border-color: rgba(117, 169, 255, .6); color: #071329; background: var(--forecast-blue); }
+      .extreme-link span { opacity: .45; font-size: 1rem; transition: opacity .2s ease, transform .2s ease; }
+      .extreme-link:hover span, .extreme-link:focus-visible span { opacity: 1; transform: translate(2px, -2px); }
+      .extreme-link:focus-visible, .forecast-card:focus-visible { outline: 2px solid var(--forecast-cyan); outline-offset: 3px; }
+      @keyframes forecast-pulse { 50% { transform: scale(.65); opacity: .55; } }
+      @keyframes forecast-float { 50% { transform: translateY(-3px) rotate(-4deg); } }
+      @media (max-width: 900px) { .forecast-card.wide { grid-column: span 6; } .forecast-card.standard { grid-column: span 3; } .forecast-timeline { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      @media (max-width: 600px) { .forecast-grid, .extreme-weather { grid-template-columns: 1fr; } .forecast-card.wide, .forecast-card.standard { grid-column: auto; } .forecast-timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } .forecast-section-title { align-items: start; flex-direction: column; } }
+      @media (prefers-reduced-motion: reduce) { .forecast-kicker i, .forecast-icon, .forecast-card, .extreme-card, .extreme-link span { animation: none; transition: none; } }
+    </style>
+    <script>
+      const HEAT_WAVE_LINK = "https://mosdac.gov.in/temperature/";
+      const COLD_WAVE_LINK = "https://mosdac.gov.in/coldwave/";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const forecastMarkup = `
+          <section class="forecast-command-center" aria-labelledby="forecast-command-title">
+            <div class="forecast-kicker"><i aria-hidden="true"></i> VYOM / ATMOSPHERIC INTELLIGENCE / LIVE</div>
+            <h1 id="forecast-command-title" class="forecast-heading">WEATHER FORECAST<span>AI-powered weather intelligence for extreme weather events</span></h1>
+            <p class="forecast-intro">VYOM fuses atmospheric telemetry, ensemble models, and location-aware signals into forecast insights that build early awareness for hazardous weather conditions.</p>
+            <div class="forecast-meta"><b>MODEL SYNC 12:42 UTC</b><b>48H HORIZON</b><b>CONFIDENCE 87%</b><b>INDIA / NIO BASIN</b></div>
+            <div class="forecast-grid" aria-label="Current forecast conditions">
+              <article class="forecast-card wide"><div class="forecast-label"><span class="forecast-icon" aria-hidden="true">&#9728;</span> Temperature forecast</div><div class="forecast-value">30.8<small> °C</small></div><div class="forecast-detail">FEELS LIKE 34.2 °C / +1.4 °C ANOMALY</div><div class="forecast-bar"><span style="width:72%"></span></div></article>
+              <article class="forecast-card standard"><div class="forecast-label"><span class="forecast-icon" aria-hidden="true">&#9730;</span> Precipitation</div><div class="forecast-value">64<small>%</small></div><div class="forecast-detail">HEAVY RAIN WINDOW / 07 SEP</div><div class="forecast-bar"><span style="width:64%"></span></div></article>
+              <article class="forecast-card standard"><div class="forecast-label"><span class="forecast-icon" aria-hidden="true">&#9832;</span> Wind field</div><div class="forecast-value">118<small> km/h</small></div><div class="forecast-detail">NW / 315° / GUSTS 135 km/h</div><div class="forecast-bar"><span style="width:81%"></span></div></article>
+              <article class="forecast-card standard"><div class="forecast-label"><span class="forecast-icon" aria-hidden="true">&#10047;</span> Humidity</div><div class="forecast-value">82<small>%</small></div><div class="forecast-detail">MOISTURE INFLUX / HIGH</div><div class="forecast-bar"><span style="width:82%"></span></div></article>
+              <article class="forecast-card standard"><div class="forecast-label"><span class="forecast-icon" aria-hidden="true">&#9729;</span> Conditions</div><div class="forecast-value">T4.5</div><div class="forecast-detail">DEEP CONVECTION / LOW SHEAR</div><div class="forecast-bar"><span style="width:74%"></span></div></article>
+              <article class="forecast-card wide forecast-alert"><div class="forecast-label"><span class="forecast-icon" aria-hidden="true">&#9888;</span> Extreme weather alert</div><div class="forecast-value">ORANGE <small>/ STAGE 4</small></div><div class="forecast-detail">NORTH ODISHA + WEST BENGAL COAST / ACTION WINDOW 24-36H</div><div class="forecast-bar"><span style="width:88%; background: linear-gradient(90deg, #ff6d65, #ffb454)"></span></div></article>
+              <article class="forecast-card wide"><div class="forecast-label"><span class="forecast-icon" aria-hidden="true">&#9906;</span> Location-based forecast</div><div class="forecast-value">PURI <small>/ ODISHA</small></div><div class="forecast-detail">19.81°N / 85.83°E / 192 KM FROM ACTIVE SYSTEM</div><div class="forecast-bar"><span style="width:58%"></span></div></article>
+            </div>
+            <div class="forecast-section-title"><h2>Multi-day forecast timeline</h2><p>AI trajectory / hourly model sync</p></div>
+            <div class="forecast-timeline" aria-label="Multi-day forecast timeline">
+              <div class="forecast-day"><strong>NOW / 06 SEP</strong><span>30°</span><small>RAIN 64% / WIND 118</small></div><div class="forecast-day"><strong>07 SEP</strong><span>29°</span><small>RAIN 82% / WIND 132</small></div><div class="forecast-day"><strong>08 SEP</strong><span>28°</span><small>RAIN 71% / WIND 105</small></div><div class="forecast-day"><strong>09 SEP</strong><span>30°</span><small>RAIN 38% / WIND 54</small></div><div class="forecast-day"><strong>10 SEP</strong><span>31°</span><small>RAIN 24% / WIND 31</small></div><div class="forecast-day"><strong>11 SEP</strong><span>31°</span><small>RAIN 19% / WIND 24</small></div>
+            </div>
+            <div class="forecast-section-title"><h2>Extreme weather</h2><p>External forecast tools / configurable links</p></div>
+            <div class="extreme-weather">
+              <article class="extreme-card"><div><div class="extreme-icon" aria-hidden="true">&#9728;</div><h3>HEAT WAVES</h3><p>Monitor extreme temperatures and heat-wave conditions.</p></div><a class="extreme-link" href="${HEAT_WAVE_LINK}" data-forecast-link="heat" aria-label="View external heat wave forecast">VIEW HEAT WAVE FORECAST <span aria-hidden="true">&#8599;</span></a></article>
+              <article class="extreme-card cold"><div><div class="extreme-icon" aria-hidden="true">&#10052;</div><h3>COLD WAVES</h3><p>Track severe cold conditions and cold-wave risks.</p></div><a class="extreme-link" href="${COLD_WAVE_LINK}" data-forecast-link="cold" aria-label="View external cold wave forecast">VIEW COLD WAVE FORECAST <span aria-hidden="true">&#8599;</span></a></article>
+            </div>
+          </section>`;
+
+        const mountForecast = () => {
+          const heading = [...document.querySelectorAll("#root h1")].find((element) => element.textContent.trim() === "MULTI-HORIZON AI FORECAST");
+          const forecastRoot = heading && heading.closest("div.space-y-8");
+          if (!forecastRoot || forecastRoot.querySelector(".forecast-command-center")) return Boolean(forecastRoot);
+          forecastRoot.innerHTML = forecastMarkup;
+          forecastRoot.querySelector('[data-forecast-link="heat"]').addEventListener("click", (event) => { event.preventDefault(); window.location.href = HEAT_WAVE_LINK; });
+          forecastRoot.querySelector('[data-forecast-link="cold"]').addEventListener("click", (event) => { event.preventDefault(); window.location.href = COLD_WAVE_LINK; });
+          return true;
+        };
+
+        const observer = new MutationObserver(() => mountForecast());
+        observer.observe(document.getElementById("root"), { childList: true, subtree: true });
+        mountForecast();
+      });
+    </script>
+    <style>
+      .intelligent-analysis { --analysis-cyan:#68e8ff; --analysis-blue:#75a9ff; --analysis-green:#72f1b2; --analysis-amber:#ffb454; animation:fade-up-section .8s ease-out; }
+      .analysis-header { text-align:center; margin-bottom:3rem; animation:fade-up-text .7s ease-out .1s both; }
+      .analysis-section-title { color:#f3fbff; font:700 clamp(2rem,4vw,3rem)/1.1 "Chakra Petch",sans-serif; letter-spacing:.04em; margin-bottom:.6rem; }
+      .analysis-section-subtitle { color:#a9c0d0; font:.92rem/1.6 "Inter",sans-serif; max-width:48rem; margin:0 auto; }
+      .analysis-cards-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:2.2rem; animation:fade-up-grid .8s ease-out .2s both; }
+      .analysis-feature-card { position:relative; overflow:hidden; padding:2rem; border:1px solid rgba(104,232,255,.25); border-radius:1rem; background:linear-gradient(135deg,rgba(4,17,35,.92),rgba(5,12,28,.88)); backdrop-filter:blur(12px); transition:all .35s cubic-bezier(.34,.1,.68,.55); }
+      .analysis-feature-card::before { content:""; position:absolute; inset:0; opacity:0; transition:opacity .35s ease; background:radial-gradient(circle at var(--mouse-x,50%) var(--mouse-y,50%),rgba(104,232,255,.15),transparent 50%); pointer-events:none; }
+      .analysis-feature-card:hover { transform:translateY(-8px); border-color:rgba(104,232,255,.4); box-shadow:0 24px 48px rgba(0,0,0,.35),0 0 40px rgba(104,232,255,.12); }
+      .analysis-feature-card:hover::before { opacity:1; }
+      .card-background-visual { position:absolute; inset:0; opacity:.08; pointer-events:none; }
+      .cyclone-card .card-background-visual { background:radial-gradient(circle at 60% 40%,#68e8ff,transparent 60%); animation:cyclone-rotate 20s linear infinite; }
+      .marine-card .card-background-visual { background:linear-gradient(135deg,#75a9ff 0%,#68e8ff 100%); animation:wave-shift 15s ease-in-out infinite; }
+      .card-content { position:relative; z-index:2; display:flex; flex-direction:column; height:100%; }
+      .card-icon-container { width:clamp(4rem,8vw,6.5rem); height:clamp(4rem,8vw,6.5rem); margin-bottom:1.5rem; color:var(--analysis-cyan); }
+      .cyclone-card .card-icon-container { color:#68e8ff; }
+      .marine-card .card-icon-container { color:#75a9ff; }
+      .card-icon { width:100%; height:100%; filter:drop-shadow(0 0 8px currentColor); animation:icon-float 3s ease-in-out infinite; }
+      .cyclone-card .card-icon { animation:icon-float 3s ease-in-out infinite,cyclone-spin 8s linear infinite; }
+      .cyclone-spiral { animation:spiral-pulse 2s ease-in-out infinite; }
+      .marine-card .card-icon { animation:icon-float 3s ease-in-out infinite; }
+      .card-title { color:#f3fbff; font:700 clamp(1.3rem,2.5vw,1.75rem)/1.2 "Chakra Petch",sans-serif; letter-spacing:.04em; margin:0; }
+      .card-description { color:#a9c0d0; font:.85rem/1.65 "Inter",sans-serif; margin:1rem 0 1.8rem; flex-grow:1; }
+      .card-cta-button { background:linear-gradient(135deg,var(--analysis-cyan),var(--analysis-blue)); color:#04101c; border:none; padding:1rem 1.8rem; border-radius:.5rem; font:700 .75rem "JetBrains Mono",monospace; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; display:inline-flex; align-items:center; gap:.8rem; transition:all .3s cubic-bezier(.34,.1,.68,.55); box-shadow:0 8px 24px rgba(104,232,255,.2); text-decoration:none; white-space:nowrap; }
+      .cyclone-card .card-cta-button { background:linear-gradient(135deg,#68e8ff,#7bb8ff); }
+      .marine-card .card-cta-button { background:linear-gradient(135deg,#75a9ff,#68e8ff); }
+      .card-cta-button:hover { transform:translateY(-3px); box-shadow:0 14px 36px rgba(104,232,255,.3),inset 0 1px 0 rgba(255,255,255,.2); }
+      .card-cta-button:active { transform:translateY(-1px); }
+      .card-cta-button span { transition:transform .3s ease; }
+      .card-cta-button:hover span { transform:translate(4px,0); }
+      .card-cta-button:focus-visible { outline:2px solid var(--analysis-cyan); outline-offset:4px; }
+      @keyframes fade-up-section { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes fade-up-text { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes fade-up-grid { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes icon-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-12px); } }
+      @keyframes cyclone-spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+      @keyframes spiral-pulse { 0%,100% { opacity:.8; } 50% { opacity:1; } }
+      @keyframes cyclone-rotate { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+      @keyframes wave-shift { 0%,100% { transform:translateX(0); } 50% { transform:translateX(10px); } }
+      @media (max-width:900px) { .analysis-cards-grid { grid-template-columns:1fr; gap:1.8rem; } }
+      @media (max-width:600px) { .intelligent-analysis { --analysis-cyan:#68e8ff; } .analysis-section-title { font-size:clamp(1.5rem,3vw,2rem); } .analysis-feature-card { padding:1.5rem; } .card-description { font-size:.8rem; margin:0.8rem 0 1.4rem; } .card-cta-button { padding:.85rem 1.4rem; font-size:.7rem; } }
+      @media (prefers-reduced-motion:reduce) { .intelligent-analysis,.analysis-header,.analysis-cards-grid,.analysis-feature-card,.card-icon,.cyclone-spiral,.card-cta-button { animation:none; transition:none; } }
+    </style>
+    <script>
+      const CYCLONE_CLIMATE_ANALYSIS_LINK = "https://mosdac.gov.in/scorpio/";
+      const MARINE_ANALYSIS_LINK = "https://mosdac.gov.in/gallery/index.html?ds=ocean";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const analysisMarkup = `
+          <section class="intelligent-analysis" aria-labelledby="analysis-section-title">
+            <div class="analysis-header">
+              <h2 id="analysis-section-title" class="analysis-section-title">Intelligent Environmental Analysis</h2>
+              <p class="analysis-section-subtitle">Explore advanced insights across atmospheric, climatic, and marine conditions.</p>
+            </div>
+            <div class="analysis-cards-grid">
+              <article class="analysis-feature-card cyclone-card" data-card-type="cyclone">
+                <div class="card-background-visual"></div>
+                <div class="card-content">
+                  <div class="card-icon-container">
+                    <svg class="card-icon" viewBox="0 0 100 100" aria-hidden="true">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"/>
+                      <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+                      <path d="M50 15 Q75 25 80 50 Q75 75 50 85 Q25 75 20 50 Q25 25 50 15" fill="none" stroke="currentColor" stroke-width="2" class="cyclone-spiral"/>
+                      <circle cx="50" cy="50" r="8" fill="currentColor" opacity="0.8"/>
+                    </svg>
+                  </div>
+                  <h3 class="card-title">Cyclone & Climate Analysis</h3>
+                  <p class="card-description">Analyze cyclone activity, atmospheric conditions, climate patterns, storm intensity, movement, and potential environmental impact using intelligent data-driven insights.</p>
+                  <button class="card-cta-button" data-link-type="cyclone" aria-label="Launch Cyclone and Climate Analysis">Launch Cyclone & Climate Analysis <span aria-hidden="true">→</span></button>
+                </div>
+              </article>
+              <article class="analysis-feature-card marine-card" data-card-type="marine">
+                <div class="card-background-visual"></div>
+                <div class="card-content">
+                  <div class="card-icon-container">
+                    <svg class="card-icon" viewBox="0 0 100 100" aria-hidden="true">
+                      <path d="M20 60 Q30 45 40 55 T60 50 T80 60" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                      <path d="M15 75 Q28 65 42 72 T70 68 T85 78" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+                      <path d="M25 85 Q40 78 55 85 T80 82" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+                      <circle cx="35" cy="35" r="6" fill="currentColor" opacity="0.9"/>
+                      <circle cx="65" cy="40" r="4" fill="currentColor" opacity="0.7"/>
+                    </svg>
+                  </div>
+                  <h3 class="card-title">Marine Analysis</h3>
+                  <p class="card-description">Monitor and analyze ocean conditions, sea-surface parameters, wave activity, wind patterns, marine hazards, and other oceanographic insights.</p>
+                  <button class="card-cta-button" data-link-type="marine" aria-label="Launch Marine Analysis">Launch Marine Analysis <span aria-hidden="true">→</span></button>
+                </div>
+              </article>
+            </div>
+          </section>`;
+
+        const renameAnalysisLinks = () => { document.querySelectorAll("#root button, #root a").forEach((element) => { if (element.textContent.trim() === "INSIGHTS") element.textContent = "ANALYSIS"; }); };
+        const mountAnalysisSection = () => {
+          const heading = [...document.querySelectorAll("#root h1")].find((element) => element.textContent.trim() === "INTELLIGENCE INSIGHTS & PHYSICAL DIAGNOSTICS");
+          const analysisRoot = heading && heading.closest("div.space-y-8");
+          if (!analysisRoot || analysisRoot.querySelector(".intelligent-analysis")) return Boolean(analysisRoot);
+          analysisRoot.innerHTML = analysisMarkup;
+          analysisRoot.querySelectorAll(".card-cta-button").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              e.preventDefault();
+              const linkType = btn.getAttribute("data-link-type");
+              const url = linkType === "cyclone" ? CYCLONE_CLIMATE_ANALYSIS_LINK : MARINE_ANALYSIS_LINK;
+              window.location.href = url;
+            });
+          });
+          return true;
+        };
+        const observer = new MutationObserver(() => { renameAnalysisLinks(); mountAnalysisSection(); });
+        observer.observe(document.getElementById("root"), { childList: true, subtree: true });
+        renameAnalysisLinks();
+        mountAnalysisSection();
+      });
+    </script>
+    <style>
+      .marine-command-center { --marine-cyan:#68e8ff; --marine-blue:#78a8ff; --marine-green:#72f1b2; --marine-amber:#ffb454; --marine-red:#ff786f; position:relative; overflow:hidden; padding:clamp(1.1rem,3vw,2.5rem); border:1px solid rgba(104,232,255,.28); border-radius:1.15rem; background:linear-gradient(135deg,rgba(3,21,39,.98),rgba(4,12,28,.94)); box-shadow:0 28px 80px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.06); }
+      .marine-command-center::before { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg,transparent 18%,rgba(104,232,255,.08) 48%,transparent 82%),repeating-linear-gradient(0deg,transparent 0 31px,rgba(104,232,255,.035) 32px); }
+      .marine-command-center>* { position:relative; z-index:1; }
+      .marine-kicker { display:flex; align-items:center; gap:.55rem; color:var(--marine-cyan); font:700 .62rem "JetBrains Mono",monospace; letter-spacing:.16em; text-transform:uppercase; }
+      .marine-kicker i,.marine-live-dot { width:.46rem; height:.46rem; border-radius:50%; background:var(--marine-cyan); box-shadow:0 0 15px var(--marine-cyan); animation:marine-pulse 1.8s ease-in-out infinite; }
+      .marine-title { max-width:62rem; margin-top:.7rem; color:#f3fbff; font:700 clamp(2.2rem,5vw,4.4rem)/.98 "Chakra Petch",sans-serif; letter-spacing:.035em; }
+      .marine-title span { display:block; margin-top:.8rem; color:var(--marine-cyan); font:500 clamp(.92rem,1.6vw,1.2rem)/1.3 "JetBrains Mono",monospace; letter-spacing:.03em; }
+      .marine-description { max-width:48rem; margin-top:1rem; color:#a9c0d0; font:.85rem/1.7 "Inter",sans-serif; }
+      .marine-flow { display:flex; flex-wrap:wrap; gap:.45rem; margin-top:1.2rem; color:#91aec0; font:700 .58rem "JetBrains Mono",monospace; letter-spacing:.08em; }
+      .marine-flow span { padding:.45rem .6rem; border:1px solid rgba(104,232,255,.2); border-radius:.35rem; background:rgba(4,28,49,.72); }
+      .marine-flow b { color:var(--marine-cyan); margin-right:.25rem; }
+      .marine-grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:.85rem; margin-top:2rem; }
+      .marine-card { grid-column:span 3; min-height:8.7rem; padding:.95rem; border:1px solid rgba(135,169,207,.18); border-radius:.7rem; background:rgba(9,28,50,.72); backdrop-filter:blur(14px); transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; cursor:pointer; }
+      .marine-card:hover,.marine-card.expanded { transform:translateY(-4px); border-color:rgba(104,232,255,.62); box-shadow:0 14px 30px rgba(0,0,0,.25),0 0 22px rgba(104,232,255,.1); }
+      .marine-card-label { display:flex; justify-content:space-between; gap:.5rem; color:#91aec0; font:700 .56rem "JetBrains Mono",monospace; letter-spacing:.08em; text-transform:uppercase; }
+      .marine-card-icon { color:var(--marine-cyan); font-size:1.1rem; }
+      .marine-card-value { margin-top:.65rem; color:#f3fbff; font:700 1.8rem/1 "Chakra Petch",sans-serif; }
+      .marine-card-value small { color:#91aec0; font:.6rem "JetBrains Mono",monospace; }
+      .marine-card-detail { margin-top:.42rem; color:#6e9bb4; font:.57rem/1.4 "JetBrains Mono",monospace; }
+      .marine-card-more { display:none; margin-top:.65rem; padding-top:.6rem; border-top:1px solid rgba(135,169,207,.18); color:#a9c0d0; font:.63rem/1.5 "Inter",sans-serif; }
+      .marine-card.expanded .marine-card-more { display:block; }
+      .marine-panel { grid-column:span 7; padding:1rem; border:1px solid rgba(135,169,207,.2); border-radius:.8rem; background:rgba(4,17,34,.8); }
+      .marine-panel.side { grid-column:span 5; }
+      .marine-panel-heading { display:flex; justify-content:space-between; align-items:end; gap:1rem; padding-bottom:.7rem; border-bottom:1px solid rgba(135,169,207,.2); }
+      .marine-panel-heading h2 { color:#f3fbff; font:700 1.2rem "Chakra Petch",sans-serif; letter-spacing:.08em; text-transform:uppercase; }
+      .marine-panel-heading span { color:#6e9bb4; font:.56rem "JetBrains Mono",monospace; text-transform:uppercase; }
+      .marine-map { position:relative; min-height:25rem; margin-top:.9rem; overflow:hidden; border:1px solid rgba(104,232,255,.18); border-radius:.6rem; background:radial-gradient(circle at 63% 42%,rgba(19,132,166,.28),transparent 25%),linear-gradient(145deg,#071a2c,#04101f 70%); }
+      .marine-map::before { content:""; position:absolute; inset:0; background-image:linear-gradient(rgba(104,232,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(104,232,255,.08) 1px,transparent 1px); background-size:40px 40px; opacity:.6; }
+      .marine-map svg { position:absolute; inset:0; width:100%; height:100%; }
+      .marine-map .route { fill:none; stroke:#68e8ff; stroke-width:2; stroke-dasharray:8 10; animation:marine-drift 9s linear infinite; }
+      .marine-map .current { fill:none; stroke:#72f1b2; stroke-width:2; stroke-dasharray:3 8; animation:marine-drift 6s linear infinite reverse; }
+      .marine-map .risk { fill:#ff786f; fill-opacity:.18; stroke:#ff786f; stroke-dasharray:4 5; animation:marine-breathe 3s ease-in-out infinite; }
+      .marine-map .storm { fill:#ffb454; stroke:#fff0c8; stroke-width:2; animation:marine-breathe 2s ease-in-out infinite; }
+      .marine-map-legend { position:absolute; left:.8rem; bottom:.8rem; display:flex; flex-wrap:wrap; gap:.5rem; padding:.55rem .65rem; border:1px solid rgba(104,232,255,.18); border-radius:.35rem; background:rgba(3,12,25,.84); color:#9ab0c6; font:.52rem "JetBrains Mono",monospace; }
+      .marine-map-legend b { width:100%; color:var(--marine-cyan); letter-spacing:.1em; }
+      .marine-map-legend span::before { content:""; display:inline-block; width:.55rem; height:.18rem; margin-right:.25rem; background:var(--marine-cyan); }
+      .marine-map-legend span:nth-child(3)::before { background:var(--marine-green); } .marine-map-legend span:nth-child(4)::before { background:var(--marine-amber); } .marine-map-legend span:nth-child(5)::before { background:var(--marine-red); }
+      .marine-metrics { display:grid; gap:.7rem; margin-top:.9rem; }
+      .marine-metric { padding:.7rem; border-left:2px solid var(--marine-cyan); background:rgba(104,232,255,.05); }
+      .marine-metric-row { display:flex; justify-content:space-between; gap:.5rem; color:#9ab0c6; font:.58rem "JetBrains Mono",monospace; text-transform:uppercase; }
+      .marine-metric-row strong { color:#f3fbff; } .marine-meter { height:.28rem; margin-top:.45rem; overflow:hidden; border-radius:9px; background:rgba(145,174,192,.14); } .marine-meter i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--marine-cyan),var(--marine-blue)); }
+      .marine-chart { width:100%; height:7rem; margin-top:.8rem; } .marine-chart polyline { fill:none; stroke:var(--marine-cyan); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:420; stroke-dashoffset:420; animation:marine-draw 2s ease forwards; } .marine-chart .amber { stroke:var(--marine-amber); animation-delay:.3s; }
+      .marine-section { grid-column:span 12; margin-top:1.4rem; }
+      .marine-alerts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; margin-top:.9rem; }
+      .marine-alert { display:grid; grid-template-columns:1.25fr .7fr 1fr .65fr; gap:.5rem; align-items:center; padding:.7rem; border:1px solid rgba(255,120,111,.22); border-radius:.35rem; background:rgba(67,24,34,.42); color:#cbd8e2; font:.58rem "JetBrains Mono",monospace; }
+      .marine-alert strong { color:#ffaaa1; } .marine-alert em { color:#ffb454; font-style:normal; } .marine-alert span:last-child { color:var(--marine-green); text-align:right; }
+      .marine-timeline { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.45rem; margin-top:.9rem; } .marine-timeline div { padding:.6rem; border-left:2px solid rgba(104,232,255,.28); background:rgba(104,232,255,.04); } .marine-timeline strong { display:block; color:#f3fbff; font:700 .6rem "JetBrains Mono",monospace; } .marine-timeline span { display:block; margin-top:.35rem; color:var(--marine-cyan); font:700 1rem "Chakra Petch",sans-serif; } .marine-timeline small { color:#91aec0; font:.52rem "JetBrains Mono",monospace; }
+      .marine-cta { grid-column:span 12; display:flex; align-items:center; justify-content:space-between; gap:1.2rem; margin-top:.15rem; padding:1.25rem; border:1px solid rgba(104,232,255,.46); border-radius:.75rem; background:linear-gradient(100deg,rgba(8,45,67,.92),rgba(7,21,43,.84)); box-shadow:0 0 32px rgba(104,232,255,.1); } .marine-cta h2 { color:#f3fbff; font:700 1.45rem "Chakra Petch",sans-serif; letter-spacing:.08em; } .marine-cta p { max-width:34rem; margin-top:.35rem; color:#a9c0d0; font:.7rem/1.5 "Inter",sans-serif; } .marine-status { display:flex; align-items:center; gap:.45rem; margin-top:.65rem; color:var(--marine-green); font:.56rem "JetBrains Mono",monospace; letter-spacing:.08em; text-transform:uppercase; } .marine-updated { margin-left:.5rem; color:#6e9bb4; }
+      .marine-live-button { display:inline-flex; align-items:center; gap:.8rem; padding:.95rem 1.25rem; border:1px solid var(--marine-cyan); border-radius:.4rem; color:#04101c; background:var(--marine-cyan); box-shadow:0 0 22px rgba(104,232,255,.28); font:700 .68rem "JetBrains Mono",monospace; letter-spacing:.08em; text-decoration:none; transition:transform .2s ease,box-shadow .2s ease,background-color .2s ease; } .marine-live-button:hover { transform:scale(1.04); color:#f3fbff; background:transparent; box-shadow:0 0 30px rgba(104,232,255,.5); } .marine-live-button span { transition:transform .2s ease; } .marine-live-button:hover span { transform:translate(3px,-3px); }
+      .about-command-center { padding:clamp(1.2rem,3vw,2.5rem); border:1px solid rgba(104,232,255,.28); border-radius:1.15rem; background:linear-gradient(135deg,rgba(3,21,39,.98),rgba(4,12,28,.94)); } .about-kicker { color:var(--marine-cyan); font:700 .62rem "JetBrains Mono",monospace; letter-spacing:.16em; } .about-title { margin-top:.7rem; color:#f3fbff; font:700 clamp(2.2rem,5vw,4rem)/1 "Chakra Petch",sans-serif; } .about-title span { display:block; margin-top:.5rem; color:var(--marine-amber); font-size:.34em; letter-spacing:.1em; text-transform:uppercase; } .about-copy { max-width:54rem; margin-top:1rem; color:#a9c0d0; font:.86rem/1.75 "Inter",sans-serif; } .about-team { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.85rem; margin-top:1.4rem; } .about-person { padding:1rem; border:1px solid rgba(135,169,207,.2); border-radius:.7rem; background:rgba(9,28,50,.72); } .about-person b { display:block; color:#f3fbff; font:700 1rem "Chakra Petch",sans-serif; } .about-person strong { display:block; margin-top:.3rem; color:var(--marine-cyan); font:.56rem "JetBrains Mono",monospace; letter-spacing:.08em; text-transform:uppercase; } .about-person p { margin-top:.65rem; color:#9ab0c6; font:.68rem/1.55 "Inter",sans-serif; } .about-vision { margin-top:1.4rem; padding:1rem; border-left:3px solid var(--marine-amber); background:rgba(255,180,84,.06); color:#f3fbff; font:700 1.15rem "Chakra Petch",sans-serif; } .about-vision span { display:block; margin-top:.35rem; color:#a9c0d0; font:400 .72rem/1.5 "Inter",sans-serif; }
+      @keyframes marine-pulse { 50% { transform:scale(.62); opacity:.5; } } @keyframes marine-drift { to { stroke-dashoffset:-100; } } @keyframes marine-breathe { 50% { opacity:.52; transform:scale(1.04); transform-origin:center; } } @keyframes marine-draw { to { stroke-dashoffset:0; } }
+      @media (max-width:900px) { .marine-card { grid-column:span 4; } .marine-panel,.marine-panel.side { grid-column:span 12; } .marine-cta { align-items:flex-start; flex-direction:column; } .about-team { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+      @media (max-width:600px) { .marine-card { grid-column:span 12; } .marine-timeline { grid-template-columns:repeat(3,minmax(0,1fr)); } .marine-alerts,.about-team { grid-template-columns:1fr; } .marine-alert { grid-template-columns:1fr 1fr; } .marine-alert span:last-child { text-align:left; } .marine-live-button { width:100%; justify-content:center; } }
+      @media (prefers-reduced-motion:reduce) { .marine-kicker i,.marine-live-dot,.marine-map .route,.marine-map .current,.marine-map .risk,.marine-map .storm,.marine-chart polyline,.marine-live-button { animation:none; transition:none; } }
+    </style>
+    <script id="h4kq2p">
+      const LIVE_MARINE_ANALYSIS_LINK = "https://mosdac.gov.in/gallery/index.html?ds=ocean";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const marineMarkup = `
+          <section class="marine-command-center" aria-labelledby="marine-analysis-title">
+            <div class="marine-kicker"><i aria-hidden="true"></i> VYOM / OBSERVE - ANALYZE - MONITOR - ALERT - ACT</div>
+            <h1 id="marine-analysis-title" class="marine-title">MARINE ANALYSIS<span>Advanced ocean intelligence for safer marine operations</span></h1>
+            <p class="marine-description">Monitor ocean conditions, sea-surface characteristics, marine hazards, and cyclone-ocean interactions through intelligent environmental analysis.</p>
+            <div class="marine-flow" aria-label="Marine intelligence workflow"><span><b>01</b> OBSERVE</span><span><b>02</b> ANALYZE</span><span><b>03</b> MONITOR</span><span><b>04</b> ALERT</span><span><b>05</b> ACT</span></div>
+            <div class="marine-grid" aria-label="Ocean intelligence dashboard">
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">~</span> Wave height</span><b>BUOY</b></div><div class="marine-card-value">8.6<small> m</small></div><div class="marine-card-detail">UP +1.2m / HIGH ENERGY</div><p class="marine-card-more">Wave energy is building across the north-west Bay of Bengal shipping corridor.</p></article>
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">&uarr;</span> Wind speed & direction</span><b>ASCAT</b></div><div class="marine-card-value">42<small> kt / NW</small></div><div class="marine-card-detail">GUSTS 52 KT / VECTOR 315 DEG</div><p class="marine-card-more">Vector flow is aligned with the active cyclone circulation and route risk.</p></article>
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">&#176;</span> Sea surface temperature</span><b>SST</b></div><div class="marine-card-value">29.4<small> C</small></div><div class="marine-card-detail">UP +0.8 C / FUELING</div><p class="marine-card-more">Warm upper-ocean conditions support elevated intensification potential.</p></article>
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">&#8776;</span> Ocean currents</span><b>HYCOM</b></div><div class="marine-card-value">1.8<small> kt</small></div><div class="marine-card-detail">NE / COASTAL JET ACTIVE</div><p class="marine-card-more">Surface current shear is increasing near the Odisha shelf break.</p></article>
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">&#9651;</span> Wave period</span><b>SWELL</b></div><div class="marine-card-value">11.2<small> s</small></div><div class="marine-card-detail">LONG SWELL / ROUTE DISRUPTION</div><p class="marine-card-more">Long-period swell increases vessel motion and port approach exposure.</p></article>
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">+ </span> Sea level</span><b>TIDE</b></div><div class="marine-card-value">+0.74<small> m</small></div><div class="marine-card-detail">ABOVE ASTRONOMICAL / RISING</div><p class="marine-card-more">Storm-driven setup is compounding the high-tide window along low-lying coastlines.</p></article>
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">&#9673;</span> Cyclone-ocean interaction</span><b>MODEL</b></div><div class="marine-card-value">HIGH</div><div class="marine-card-detail">OHC 86 KJ/CM2 / RI WATCH</div><p class="marine-card-more">Deep warm water and low shear create an elevated rapid-intensification signal.</p></article>
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">!</span> Marine hazard risk</span><b>ALERT</b></div><div class="marine-card-value">HIGH</div><div class="marine-card-detail">BOB CORRIDOR / PORTS ADVISED</div><p class="marine-card-more">Fishing suspension and route avoidance are recommended within the red zone.</p></article>
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">&#9730;</span> Rainfall over ocean</span><b>GPM</b></div><div class="marine-card-value">142<small> mm</small></div><div class="marine-card-detail">24H ACCUMULATION / HEAVY BANDS</div><p class="marine-card-more">Convective rainbands are reducing visibility and increasing deck operations risk.</p></article>
+              <article class="marine-card" tabindex="0"><div class="marine-card-label"><span><span class="marine-card-icon">&#9678;</span> Marine observation zones</span><b>06 ACTIVE</b></div><div class="marine-card-value">04<small> buoys</small></div><div class="marine-card-detail">NIO-BOB / NIO-ARB / COASTAL ARRAY</div><p class="marine-card-more">Observation zones are synchronized across buoy, satellite, and vessel telemetry.</p></article>
+              <div class="marine-panel"><div class="marine-panel-heading"><h2>Marine Intelligence Map</h2><span>Updated 12:42 UTC / interactive layers</span></div><div class="marine-map" role="img" aria-label="Animated marine intelligence map showing cyclone, wave, current, wind, and risk zones"><svg viewBox="0 0 700 390" aria-hidden="true"><path d="M0 110 Q90 145 175 95 T340 115 Q420 160 510 108 T700 132 L700 390 L0 390Z" fill="#0a2840" stroke="#204762"/><path class="risk" d="M418 98 Q505 52 585 96 Q618 148 568 198 Q500 218 438 178 Q402 140 418 98Z"/><path class="route" d="M46 328 C150 278 246 320 330 260 S490 215 655 70"/><path class="current" d="M80 205 Q170 155 265 210 T460 196 T650 215 M110 245 Q205 205 300 250 T500 242 T670 255"/><path d="M405 155 C455 120 500 118 545 142" fill="none" stroke="#78a8ff" stroke-width="2" stroke-dasharray="2 7"/><circle class="storm" cx="503" cy="141" r="9"/><circle cx="503" cy="141" r="24" fill="none" stroke="#ffb454" stroke-width="1.5" opacity=".7"/><text x="520" y="137" fill="#ffcf7b" font-size="12" font-family="JetBrains Mono">ASHANI / 118 KMH</text><text x="60" y="350" fill="#6e9bb4" font-size="11" font-family="JetBrains Mono">ARABIAN SEA</text><text x="510" y="300" fill="#6e9bb4" font-size="11" font-family="JetBrains Mono">BAY OF BENGAL</text><g fill="#68e8ff"><circle cx="170" cy="240" r="4"/><circle cx="280" cy="185" r="4"/><circle cx="620" cy="230" r="4"/></g></svg><div class="marine-map-legend"><b>MARINE CONDITIONS</b><span>Wave Height</span><span>Wind</span><span>SST / Current</span><span>Hazard Zone</span></div></div></div>
+              <div class="marine-panel side"><div class="marine-panel-heading"><h2>Cyclone-Ocean Interaction</h2><span>Physics-informed signal</span></div><div class="marine-metrics"><div class="marine-metric"><div class="marine-metric-row"><span>Ocean heat content</span><strong>HIGH</strong></div><div class="marine-meter"><i style="width:88%"></i></div></div><div class="marine-metric"><div class="marine-metric-row"><span>Sea surface temperature</span><strong>29.4 C</strong></div><div class="marine-meter"><i style="width:82%"></i></div></div><div class="marine-metric"><div class="marine-metric-row"><span>Wave energy</span><strong>MODERATE</strong></div><div class="marine-meter"><i style="width:61%"></i></div></div><div class="marine-metric"><div class="marine-metric-row"><span>Cyclone intensification potential</span><strong>ELEVATED</strong></div><div class="marine-meter"><i style="width:76%"></i></div></div><div class="marine-metric"><div class="marine-metric-row"><span>Marine hazard level</span><strong>HIGH</strong></div><div class="marine-meter"><i style="width:84%;background:linear-gradient(90deg,#ffb454,#ff786f)"></i></div></div></div><svg class="marine-chart" viewBox="0 0 520 100" aria-label="Ocean interaction trend chart"><polyline points="8,76 90,68 170,54 250,59 335,35 420,42 512,18"/><polyline class="amber" points="8,84 90,78 170,73 250,66 335,61 420,52 512,45"/></svg></div>
+              <div class="marine-section"><div class="marine-panel-heading"><h2>Marine Forecast</h2><span>NOW &rarr; +6H &rarr; +12H &rarr; +24H &rarr; +48H &rarr; +72H</span></div><div class="marine-timeline"><div><strong>NOW</strong><span>8.6m</span><small>42 kt / HIGH</small></div><div><strong>+6H</strong><span>9.1m</span><small>45 kt / HIGH</small></div><div><strong>+12H</strong><span>10.4m</span><small>48 kt / HIGH</small></div><div><strong>+24H</strong><span>11.8m</span><small>52 kt / EXTREME</small></div><div><strong>+48H</strong><span>9.7m</span><small>38 kt / HIGH</small></div><div><strong>+72H</strong><span>6.4m</span><small>28 kt / MODERATE</small></div></div></div>
+              <div class="marine-section"><div class="marine-panel-heading"><h2>Marine Hazard Alerts</h2><span>Operational watchlist / 06 Sep 2026</span></div><div class="marine-alerts"><div class="marine-alert"><strong>High Waves</strong><em>HIGH</em><span>North BOB</span><span>ACTIVE</span></div><div class="marine-alert"><strong>Strong Marine Winds</strong><em>EXTREME</em><span>Odisha Coast</span><span>ACTIVE</span></div><div class="marine-alert"><strong>Dangerous Currents</strong><em>MODERATE</em><span>Paradip Shelf</span><span>MONITOR</span></div><div class="marine-alert"><strong>Storm Surge Risk</strong><em>HIGH</em><span>Dhamra Estuary</span><span>ACTIVE</span></div><div class="marine-alert"><strong>Coastal Flooding Risk</strong><em>HIGH</em><span>Lowlands</span><span>PREPARE</span></div><div class="marine-alert"><strong>Cyclonic Sea Conditions</strong><em>EXTREME</em><span>BOB Corridor</span><span>ACTIVE</span></div></div></div>
+              <div class="marine-cta"><div><h2>LIVE MARINE ANALYSIS</h2><p>Access real-time ocean conditions, marine hazards, wave intelligence, and cyclone-ocean analysis.</p><div class="marine-status"><i class="marine-live-dot" aria-hidden="true"></i> LIVE MARINE DATA <span class="marine-updated">Last Updated: <time data-marine-updated>--:--:-- UTC</time></span></div></div><a id="z7m3px" href="#" class="marine-live-button" data-live-marine-analysis>LIVE MARINE ANALYSIS <span aria-hidden="true">&#8599;</span></a></div>
+            </div>
+          </section>`;
+        const aboutMarkup = `<section class="about-command-center" aria-labelledby="about-vyom-title"><div class="about-kicker">VYOM / TEAM / MISSION CONTROL</div><h1 id="about-vyom-title" class="about-title">ABOUT VYOM<span>Turning Data Into Disaster Intelligence</span></h1><p class="about-copy"><strong>Vyom - Cyclone Intelligence</strong> is an AI-powered platform designed to enhance cyclone monitoring, prediction, analysis, and disaster preparedness. Our team combines Artificial Intelligence, Machine Learning, Full-Stack Development, Data Analysis, Agentic AI, and Cloud Deployment to transform complex environmental data into meaningful and actionable insights.</p><h2 class="marine-title" style="font-size:2rem;margin-top:2rem">MEET OUR TEAM</h2><div class="about-team"><article class="about-person"><b>Rajat Tripathi</b><strong>Team Lead & AI Model Architect</strong><p>Leads the overall technical architecture, AI/ML models, intelligence pipeline, and coordination across technical components.</p></article><article class="about-person"><b>Namrata Tiwari</b><strong>Research, Documentation & Presentation</strong><p>Leads research, project documentation, presentation material, domain understanding, and communication of VYOM's vision.</p></article><article class="about-person"><b>Sneha Singh</b><strong>Full-Stack Developer</strong><p>Owns frontend and backend development, interactive UI, APIs, backend functionality, and module integration.</p></article><article class="about-person"><b>Parth Dubey</b><strong>Model Deployment & FastAPI</strong><p>Deploys AI/ML models and develops the FastAPI layer for efficient endpoints and application communication.</p></article><article class="about-person"><b>Shiva Prasad Shukla</b><strong>Agentic AI Developer</strong><p>Builds intelligent agents and automated reasoning workflows for context-aware insights and decision support.</p></article><article class="about-person"><b>Khushi</b><strong>Exploratory Data Analysis (EDA)</strong><p>Performs data cleaning, visualization, pattern identification, and statistical exploration across cyclone datasets.</p></article></div><div class="about-vision">ONE TEAM. ONE VISION.<span>Together, we aim to make cyclone intelligence smarter, faster, and more accessible, helping transform complex environmental data into insights that support better awareness, preparedness, and decision-making.</span></div></section>`;
+        const updateMarineClock = () => { const clock = document.querySelector("[data-marine-updated]"); if (clock) clock.textContent = `${new Date().toISOString().slice(11, 19)} UTC`; };
+        const mountMarine = () => { const target = document.querySelector(".climate-command-center"); if (!target) return false; target.outerHTML = marineMarkup; document.querySelectorAll(".marine-card").forEach((card) => { const toggle = () => card.classList.toggle("expanded"); card.addEventListener("click", toggle); card.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggle(); } }); }); const button = document.querySelector("[data-live-marine-analysis]"); if (button) button.addEventListener("click", (event) => { event.preventDefault(); window.location.href = LIVE_MARINE_ANALYSIS_LINK; }); updateMarineClock(); window.setInterval(updateMarineClock, 1000); return true; };
+        const mountAbout = () => { const heading = [...document.querySelectorAll("#root h1")].find((element) => element.textContent.trim() === "ABOUT VYOM BY PRAXICS"); const root = heading && heading.closest("div.space-y-8"); if (!root || root.querySelector(".about-command-center")) return false; root.innerHTML = aboutMarkup; return true; };
+        const observer = new MutationObserver(() => { mountMarine(); mountAbout(); }); observer.observe(document.getElementById("root"), { childList:true, subtree:true }); mountMarine(); mountAbout();
+      });
+    </script>
   </head>
   <body class="bg-vyom-void text-vyom-text font-sans antialiased overflow-x-hidden selection:bg-vyom-cyan selection:text-vyom-void">
     <div id="root"></div>
   </body>
 </html>
+  
